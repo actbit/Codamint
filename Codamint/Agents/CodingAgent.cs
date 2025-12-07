@@ -70,17 +70,14 @@ namespace Codamint.Agents
             {
                 _logger.LogInformation("Processing user prompt: {Prompt}", userPrompt);
 
-                var systemPrompt = @"You are a helpful coding assistant. Use the available functions to complete tasks.
-
-Available plugins:
-- FileOperation: ReadFile, WriteFile, ListFiles, DeleteFile, CreateDirectory, GetFileInfo, AppendFile
-- CodeExecution: ExecuteCSharpCode, ValidateCSharpSyntax, ExecutePowerShellCommand, ExecutePowerShellScript
-- CodeGeneration: GenerateCode, GenerateFunction, GenerateUnitTests
-- CodeAnalysis: AnalyzeCode, ReviewCode, SecurityAnalysis, SuggestRefactoring
-
-For file operations, use FileOperation plugin functions.
-For code tasks, use CodeGeneration, CodeAnalysis, or CodeExecution plugins.
-Always call functions to complete requests, don't just explain.";
+                var systemPrompt = "You are a helpful coding assistant. Use available functions to complete tasks. " +
+                    "FileOperation: ReadFile, WriteFile (creates if not exists), ListFiles, DeleteFile, CreateDirectory, GetFileInfo, AppendFile, GetCurrentDirectory. " +
+                    "CodeExecution: ExecuteCSharpCode (Roslyn), ValidateCSharpSyntax, ExecutePowerShellCommand (run programs/commands/system ops), ExecutePowerShellScript. " +
+                    "CodeGeneration: GenerateCode, GenerateFunction, GenerateUnitTests. " +
+                    "CodeAnalysis: AnalyzeCode, ReviewCode, SecurityAnalysis, SuggestRefactoring. " +
+                    "For files: use FileOperation. For programs: use ExecutePowerShellCommand (dotnet build, npm install, etc). " +
+                    "Always call functions, don't just explain. " +
+                    "IMPORTANT: Respond in user's language (Japanese->Japanese, English->English).";
 
                 var fullPrompt = $@"{systemPrompt}
 
