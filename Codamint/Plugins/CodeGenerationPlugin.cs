@@ -1,5 +1,6 @@
 using Microsoft.SemanticKernel;
 using System.ComponentModel;
+using System.Text.Json;
 
 namespace Codamint.Plugins
 {
@@ -8,6 +9,17 @@ namespace Codamint.Plugins
     /// </summary>
     public class CodeGenerationPlugin
     {
+        /// <summary>
+        /// ツール結果を JSON 互換性のためにエスケープ
+        /// </summary>
+        private static string EscapeForJson(string input)
+        {
+            if (string.IsNullOrEmpty(input))
+                return input;
+
+            // JsonSerializer を使用して安全にエスケープ
+            return JsonSerializer.Serialize(input).Trim('"');
+        }
         [KernelFunction, Description("Generate code based on the given requirements")]
         public async Task<string> GenerateCode(
             Kernel kernel,
@@ -31,9 +43,7 @@ Generated Code:";
             var result = response.ToString();
 
             // JSON シリアライズ時のエスケープ問題を回避
-            result = result.Replace("\r\n", "\n").Replace("\r", "\n");
-
-            return result;
+            return EscapeForJson(result);
         }
 
         [KernelFunction, Description("Generate a function with specific signature")]
@@ -55,9 +65,7 @@ Provide a complete, production-ready implementation with proper error handling a
             var result = response.ToString();
 
             // JSON シリアライズ時のエスケープ問題を回避
-            result = result.Replace("\r\n", "\n").Replace("\r", "\n");
-
-            return result;
+            return EscapeForJson(result);
         }
 
         [KernelFunction, Description("Generate unit tests for given code")]
@@ -83,9 +91,7 @@ Generated Tests:";
             var result = response.ToString();
 
             // JSON シリアライズ時のエスケープ問題を回避
-            result = result.Replace("\r\n", "\n").Replace("\r", "\n");
-
-            return result;
+            return EscapeForJson(result);
         }
     }
 }
