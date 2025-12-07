@@ -1,157 +1,136 @@
 using Microsoft.SemanticKernel;
-using System.Collections.ObjectModel;
+using Microsoft.CodeAnalysis.CSharp.Scripting;
+using Microsoft.CodeAnalysis.Scripting;
 using System.ComponentModel;
-using System.Diagnostics;
+using System.Text;
+using System.Collections.ObjectModel;
 using System.Management.Automation;
 using System.Management.Automation.Runspaces;
-using System.Text;
 
 namespace Codamint.Plugins
 {
     /// <summary>
-    /// コード実行・テスト機能を提供するプラグイン
+    /// C# コード実行とPowerShellシェル機能を提供するプラグイン（Roslyn使用）
     /// </summary>
     public class CodeExecutionPlugin
     {
-        [KernelFunction, Description("Execute C# code snippet")]
+        [KernelFunction, Description("Execute C# code snippet using Roslyn")]
         public async Task<string> ExecuteCSharpCode(
-            Kernel kernel,
             [Description("The C# code to execute")] string code)
         {
             try
             {
-                // このメソッドは通常、Roslyn コンパイラを使用して実装されます
-                // ここでは簡略版を提示します
-                var prompt = $@"Review and validate the following C# code for execution:
-
-Code:
-{code}
-
-Provide:
-1. Syntax validation
-2. Potential runtime issues
-3. Dependencies required
-4. Expected output
-
-Validation Report:";
-
-                var response = await kernel.InvokePromptAsync(prompt);
-                return response.ToString();
+                var result = await CSharpScript.EvaluateAsync(code);
+                return $"Execution successful!\nResult: {result ?? "null"}";
+            }
+            catch (CompilationErrorException ex)
+            {
+                var sb = new StringBuilder();
+                sb.AppendLine("Compilation Error:");
+                foreach (var diagnostic in ex.Diagnostics)
+                {
+                    sb.AppendLine($"  Line {diagnostic.Location.GetLineSpan().StartLinePosition.Line + 1}: {diagnostic.GetMessage()}");
+                }
+                return sb.ToString();
             }
             catch (Exception ex)
             {
-                return $"Error executing code: {ex.Message}";
+                return $"Execution Error: {ex.GetType().Name}\n{ex.Message}";
             }
         }
 
-        [KernelFunction, Description("Run unit tests")]
-        public async Task<string> RunTests(
-            Kernel kernel,
-            [Description("Test project path or code")] string testInput)
+        [KernelFunction, Description("Validate C# code syntax")]
+        public async Task<string> ValidateCSharpSyntax(
+            [Description("The C# code to validate")] string code)
         {
             try
             {
-                var prompt = $@"Analyze the following test code and suggest how to run it:
+                var script = CSharpScript.Create(code);
+                var compilation = script.GetCompilation();
+                var diagnostics = compilation.GetDiagnostics();
 
-Test Code/Path:
-{testInput}
+                if (!diagnostics.Any())
+                {
+                    return "✓ Syntax is valid! No compilation errors found.";
+                }
 
-Provide:
-1. Command to run tests
-2. Expected output format
-3. Test framework detection
-4. Coverage recommendations
-
-Test Execution Plan:";
-
-                var response = await kernel.InvokePromptAsync(prompt);
-                return response.ToString();
+                var sb = new StringBuilder();
+                sb.AppendLine("Syntax Validation Issues:");
+                foreach (var diagnostic in diagnostics)
+                {
+                    var lineSpan = diagnostic.Location.GetLineSpan();
+                    var lineNumber = lineSpan.StartLinePosition.Line + 1;
+                    var column = lineSpan.StartLinePosition.Character + 1;
+                    sb.AppendLine($"  Line {lineNumber}, Column {column}: {diagnostic.GetMessage()}");
+                }
+                return sb.ToString();
             }
             catch (Exception ex)
             {
-                return $"Error running tests: {ex.Message}";
+                return $"Validation Error: {ex.Message}";
             }
         }
 
-        [KernelFunction, Description("Validate code syntax")]
-        public async Task<string> ValidateSyntax(
-            Kernel kernel,
-            [Description("The code to validate")] string code,
-            [Description("Programming language")] string language = "C#")
-        {
-            var prompt = $@"Validate the syntax of the following {language} code:
-
-Code:
-{code}
-
-Check for:
-1. Syntax errors
-2. Missing semicolons, braces
-3. Invalid keywords
-4. Incomplete statements
-
-Provide a detailed syntax validation report with line numbers where issues occur.
-
-Syntax Validation Report:";
-
-            var response = await kernel.InvokePromptAsync(prompt);
-            return response.ToString();
-        }
-
-        [KernelFunction, Description("Execute shell command safely")]
-        public async Task<string> ExecuteCommand(
-            Kernel kernel,
-            [Description("The command to execute")] string command,
-            [Description("Command timeout in seconds")] int timeoutSeconds = 30)
+        [KernelFunction, Description("Execute C# code with custom globals")]
+        public async Task<string> ExecuteCSharpCodeWithGlobals(
+            [Description("The C# code to execute")] string code,
+            [Description("Global variables as JSON (e.g., {\"x\": 10, \"name\": \"test\"})")] string globals = "{}")
         {
             try
             {
-                // NOTE: This is a simplified safe execution wrapper
-                // In production, use proper sandboxing
+                // Parse globals JSON (simplified implementation)
+                var globalVars = new Dictionary<string, object>();
+                if (!string.IsNullOrWhiteSpace(globals) && globals != "{}")
+                {
+                    // For simple globals, you might use JsonSerializer
+                    // This is a simplified version
+                    globalVars["globals"] = globals;
+                }
 
-                var prompt = $@"Analyze if this command is safe to execute and provide recommendations:
-
-Command: {command}
-Timeout: {timeoutSeconds} seconds
-
-Analyze for:
-1. Security risks
-2. System impact
-3. Safe parameters
-4. Alternative approaches
-
-Safety Assessment:";
-
-                var response = await kernel.InvokePromptAsync(prompt);
-                return response.ToString();
+                var result = await CSharpScript.EvaluateAsync(code, globals: globalVars);
+                return $"Execution successful!\nResult: {result ?? "null"}";
             }
             catch (Exception ex)
             {
-                return $"Error analyzing command: {ex.Message}";
+                return $"Execution Error: {ex.GetType().Name}\n{ex.Message}";
             }
         }
 
-        [KernelFunction, Description("Generate and run performance tests")]
-        public async Task<string> PerformanceTest(
-            Kernel kernel,
-            [Description("The code to test performance")] string code,
-            [Description("Test iterations")] int iterations = 1000)
+        [KernelFunction, Description("Get syntax errors in C# code")]
+        public async Task<string> GetSyntaxErrors(
+            [Description("The C# code to analyze")] string code)
         {
-            var prompt = $@"Create a performance test for the following code that runs {iterations} iterations:
+            try
+            {
+                var script = CSharpScript.Create(code);
+                var compilation = script.GetCompilation();
+                var diagnostics = compilation.GetDiagnostics()
+                    .Where(d => d.Severity == Microsoft.CodeAnalysis.DiagnosticSeverity.Error)
+                    .ToList();
 
-Code:
-{code}
+                if (!diagnostics.Any())
+                {
+                    return "No syntax errors found!";
+                }
 
-Generate:
-1. Benchmark code structure
-2. Metrics to measure
-3. Expected performance ranges
-4. Optimization suggestions based on results
+                var sb = new StringBuilder();
+                sb.AppendLine($"Found {diagnostics.Count} syntax error(s):");
+                sb.AppendLine();
 
-Performance Test Code:";
+                foreach (var diagnostic in diagnostics)
+                {
+                    var lineSpan = diagnostic.Location.GetLineSpan();
+                    var lineNumber = lineSpan.StartLinePosition.Line + 1;
+                    var column = lineSpan.StartLinePosition.Character + 1;
+                    sb.AppendLine($"[Line {lineNumber}, Col {column}] {diagnostic.Id}: {diagnostic.GetMessage()}");
+                }
 
-            var response = await kernel.InvokePromptAsync(prompt);
-            return response.ToString();
+                return sb.ToString();
+            }
+            catch (Exception ex)
+            {
+                return $"Analysis Error: {ex.Message}";
+            }
         }
 
         [KernelFunction, Description("Execute PowerShell command")]
@@ -170,7 +149,6 @@ Performance Test Code:";
                         var output = new StringBuilder();
                         var errorOutput = new StringBuilder();
 
-                        // Get output
                         Collection<PSObject> results = null;
                         Exception executionError = null;
 
@@ -191,7 +169,6 @@ Performance Test Code:";
                             executionError = ex;
                         }
 
-                        // Get errors
                         if (pipeline.Error != null && pipeline.Error.Count > 0)
                         {
                             foreach (var error in pipeline.Error.ReadToEnd())
@@ -256,67 +233,6 @@ Performance Test Code:";
             catch (Exception ex)
             {
                 return $"Error executing PowerShell script: {ex.Message}";
-            }
-        }
-
-        [KernelFunction, Description("Execute command with output capture")]
-        public async Task<string> ExecuteSystemCommand(
-            [Description("The system command to execute")] string command,
-            [Description("Command arguments")] string arguments = "",
-            [Description("Command timeout in seconds")] int timeoutSeconds = 30)
-        {
-            try
-            {
-                var processInfo = new ProcessStartInfo
-                {
-                    FileName = command,
-                    Arguments = arguments,
-                    RedirectStandardOutput = true,
-                    RedirectStandardError = true,
-                    UseShellExecute = false,
-                    CreateNoWindow = true
-                };
-
-                var output = new StringBuilder();
-                var errorOutput = new StringBuilder();
-
-                using (var process = Process.Start(processInfo))
-                {
-                    if (process != null)
-                    {
-                        output.Append(process.StandardOutput.ReadToEnd());
-                        errorOutput.Append(process.StandardError.ReadToEnd());
-
-                        if (!process.WaitForExit(timeoutSeconds * 1000))
-                        {
-                            process.Kill();
-                            return "Error: Command execution timeout";
-                        }
-
-                        var result = new StringBuilder();
-                        result.AppendLine($"Command: {command} {arguments}");
-                        result.AppendLine($"Exit Code: {process.ExitCode}");
-                        result.AppendLine("---");
-                        if (output.Length > 0)
-                        {
-                            result.AppendLine("Output:");
-                            result.Append(output.ToString());
-                        }
-                        if (errorOutput.Length > 0)
-                        {
-                            result.AppendLine("Error Output:");
-                            result.Append(errorOutput.ToString());
-                        }
-
-                        return result.ToString();
-                    }
-                }
-
-                return "Error: Failed to start process";
-            }
-            catch (Exception ex)
-            {
-                return $"Error executing system command: {ex.Message}";
             }
         }
 

@@ -92,21 +92,23 @@ namespace Codamint.Plugins
             }
         }
 
-        [KernelFunction, Description("List files in directory")]
+        [KernelFunction, Description("List files in directory (use current directory if path is empty)")]
         public async Task<string> ListFiles(
-            [Description("The directory path")] string directoryPath,
+            [Description("The directory path (leave empty for current directory)")] string directoryPath = "",
             [Description("Search pattern (e.g. '*.cs')")] string searchPattern = "*")
         {
             try
             {
-                if (!Directory.Exists(directoryPath))
+                var targetDir = string.IsNullOrWhiteSpace(directoryPath) ? Directory.GetCurrentDirectory() : directoryPath;
+
+                if (!Directory.Exists(targetDir))
                 {
-                    return $"Error: Directory not found - {directoryPath}";
+                    return $"Error: Directory not found - {targetDir}";
                 }
 
-                var files = Directory.GetFiles(directoryPath, searchPattern);
+                var files = Directory.GetFiles(targetDir, searchPattern);
                 var result = new StringBuilder();
-                result.AppendLine($"Files in {directoryPath}:");
+                result.AppendLine($"Files in {targetDir}:");
                 foreach (var file in files)
                 {
                     var info = new FileInfo(file);
@@ -571,6 +573,20 @@ namespace Codamint.Plugins
             }
 
             return $"{len:0.##} {sizes[order]}";
+        }
+
+        [KernelFunction, Description("Get current working directory")]
+        public async Task<string> GetCurrentDirectory()
+        {
+            try
+            {
+                var currentDir = Directory.GetCurrentDirectory();
+                return $"Current directory: {currentDir}";
+            }
+            catch (Exception ex)
+            {
+                return $"Error getting current directory: {ex.Message}";
+            }
         }
     }
 }

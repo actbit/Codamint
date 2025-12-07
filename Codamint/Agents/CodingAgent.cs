@@ -1,5 +1,7 @@
 using Microsoft.Extensions.Logging;
 using Microsoft.SemanticKernel;
+using Microsoft.SemanticKernel.ChatCompletion;
+using Microsoft.SemanticKernel.Connectors.OpenAI;
 using Codamint.Plugins;
 using Codamint.Services;
 using Codamint.Settings;
@@ -23,6 +25,16 @@ namespace Codamint.Agents
             _logger = logger;
             _kernelService = kernelService;
             InitializePlugins();
+            InitializeFilters();
+        }
+
+        /// <summary>
+        /// カーネルフィルターを初期化してツール呼び出しをインターセプト
+        /// </summary>
+        private void InitializeFilters()
+        {
+            // ツール実行前フィルター
+            _kernel.FunctionInvocationFilters.Add(new ToolCallInterceptionFilter(_logger));
         }
 
         /// <summary>
@@ -58,27 +70,34 @@ namespace Codamint.Agents
             {
                 _logger.LogInformation("Processing user prompt: {Prompt}", userPrompt);
 
-                // プロンプトを処理してAIに実行させる
-                var systemPrompt = @"You are a helpful coding assistant powered by Semantic Kernel.
-You have access to the following capabilities:
-1. CodeGeneration - Can generate code based on requirements
-2. CodeAnalysis - Can analyze and review code
-3. CodeExecution - Can validate and execute code
-4. FileOperation - Can read/write files
+                var systemPrompt = @"You are a helpful coding assistant. Use the available functions to complete tasks.
 
-Based on the user's request, use the appropriate functions to help them.
-Always explain what you're doing and provide clear, helpful responses.";
+Available plugins:
+- FileOperation: ReadFile, WriteFile, ListFiles, DeleteFile, CreateDirectory, GetFileInfo, AppendFile
+- CodeExecution: ExecuteCSharpCode, ValidateCSharpSyntax, ExecutePowerShellCommand, ExecutePowerShellScript
+- CodeGeneration: GenerateCode, GenerateFunction, GenerateUnitTests
+- CodeAnalysis: AnalyzeCode, ReviewCode, SecurityAnalysis, SuggestRefactoring
+
+For file operations, use FileOperation plugin functions.
+For code tasks, use CodeGeneration, CodeAnalysis, or CodeExecution plugins.
+Always call functions to complete requests, don't just explain.";
 
                 var fullPrompt = $@"{systemPrompt}
 
-User Request: {userPrompt}
+User Request: {userPrompt}";
 
-Response:";
+                var executionSettings = new OpenAIPromptExecutionSettings
+                {
+                    FunctionChoiceBehavior = FunctionChoiceBehavior.Auto()
+                };
 
-                // 実行設定を取得（Temperature と MaxTokens が null の場合は含めない）
-                var executionSettings = _kernelService.CreateExecutionSettings();
+                var arguments = new KernelArguments();
+                arguments.ExecutionSettings = new Dictionary<string, PromptExecutionSettings>
+                {
+                    { "default", executionSettings }
+                };
 
-                var result = await _kernel.InvokePromptAsync(fullPrompt, new KernelArguments { ["executionSettings"] = executionSettings });
+                var result = await _kernel.InvokePromptAsync(fullPrompt, arguments);
                 var response = result.ToString();
 
                 _logger.LogInformation("Prompt processed successfully");
