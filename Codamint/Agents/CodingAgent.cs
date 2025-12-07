@@ -60,9 +60,10 @@ namespace Codamint.Agents
             try
             {
                 // 各プラグインをカーネルに追加
+                // CodeExecutionPlugin は無効化（C#実行機能を削除）
                 // CodeGenerationPlugin は削除（ツール結果のエスケープ問題が発生するため）
                 // CodeAnalysisPlugin は削除（不要な呼び出しが多いため）
-                _kernel.Plugins.AddFromType<CodeExecutionPlugin>("CodeExecution");
+                _kernel.Plugins.AddFromType<PowerShellPlugin>("PowerShell");
                 _kernel.Plugins.AddFromType<FileOperationPlugin>("FileOperation");
 
                 _logger.LogInformation("All plugins initialized successfully");
@@ -85,8 +86,7 @@ namespace Codamint.Agents
 
                 var systemPrompt = "You are a helpful coding assistant. Use available functions to complete tasks. " +
                     "FileOperation functions: ReadFile, WriteFile, ListFiles, DeleteFile, CreateDirectory, GetFileInfo, AppendFile, GetCurrentDirectory. " +
-                    "CodeExecution functions: ExecuteCSharpCode, ValidateCSharpSyntax, ExecutePowerShellCommand, ExecutePowerShellScript. " +
-                    "CodeAnalysis functions: AnalyzeCode, ReviewCode, SecurityAnalysis, SuggestRefactoring. " +
+                    "PowerShell functions: ExecutePowerShellCommand, ExecutePowerShellScript, GetPowerShellCmdlets, GetPowerShellHelp. " +
                     "Call functions ONCE to complete requests. Do not make multiple sequential function calls. Respond in the user's language.";
 
                 var fullPrompt = systemPrompt + " User Request: " + userPrompt;
