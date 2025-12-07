@@ -61,7 +61,7 @@ namespace Codamint.Agents
             {
                 // 各プラグインをカーネルに追加
                 // CodeGenerationPlugin は削除（ツール結果のエスケープ問題が発生するため）
-                _kernel.Plugins.AddFromType<CodeAnalysisPlugin>("CodeAnalysis");
+                // CodeAnalysisPlugin は削除（不要な呼び出しが多いため）
                 _kernel.Plugins.AddFromType<CodeExecutionPlugin>("CodeExecution");
                 _kernel.Plugins.AddFromType<FileOperationPlugin>("FileOperation");
 
@@ -87,7 +87,7 @@ namespace Codamint.Agents
                     "FileOperation functions: ReadFile, WriteFile, ListFiles, DeleteFile, CreateDirectory, GetFileInfo, AppendFile, GetCurrentDirectory. " +
                     "CodeExecution functions: ExecuteCSharpCode, ValidateCSharpSyntax, ExecutePowerShellCommand, ExecutePowerShellScript. " +
                     "CodeAnalysis functions: AnalyzeCode, ReviewCode, SecurityAnalysis, SuggestRefactoring. " +
-                    "Always call functions to complete requests. Respond in the user's language.";
+                    "Call functions ONCE to complete requests. Do not make multiple sequential function calls. Respond in the user's language.";
 
                 var fullPrompt = systemPrompt + " User Request: " + userPrompt;
 
