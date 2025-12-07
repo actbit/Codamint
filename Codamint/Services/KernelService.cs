@@ -3,6 +3,7 @@ using Microsoft.Extensions.Configuration.Binder;
 using Microsoft.Extensions.Logging;
 using Microsoft.SemanticKernel;
 using Codamint.Settings;
+using System.Text;
 
 namespace Codamint.Services
 {
@@ -51,6 +52,7 @@ namespace Codamint.Services
                     break;
 
                 case "custom":
+                case "ollama":
                     InitializeCustomOpenAI(kernelBuilder, openAiSettings);
                     break;
 
@@ -133,7 +135,10 @@ namespace Codamint.Services
                 _logger.LogInformation("Configured HTTP proxy: {ProxyUrl}", settings.ProxyUrl);
             }
 
-            var httpClient = new HttpClient(handler)
+            // リクエスト/レスポンスをログ出力するデバッグハンドラーを追加
+            var loggingHandler = new DebugHttpHandler(_logger, handler);
+
+            var httpClient = new HttpClient(loggingHandler)
             {
                 Timeout = TimeSpan.FromSeconds(settings.TimeoutSeconds)
             };
@@ -193,6 +198,56 @@ namespace Codamint.Services
                 openAiSettings.MaxTokens.HasValue ? openAiSettings.MaxTokens.ToString() : "API default");
 
             return executionSettings;
+        }
+    }
+
+    /// <summary>
+    /// HTTP リクエスト/レスポンスをログ出力するデバッグハンドラー
+    /// </summary>
+    public class DebugHttpHandler : DelegatingHandler
+    {
+        private readonly ILogger _logger;
+
+        public DebugHttpHandler(ILogger logger, HttpMessageHandler innerHandler)
+            : base(innerHandler)
+        {
+            _logger = logger;
+        }
+
+        protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
+        {
+            // リクエストをログ出力
+            _logger.LogInformation("HTTP Request: {Method} {Uri}", request.Method, request.RequestUri);
+
+            if (request.Content != null)
+            {
+                var content = await request.Content.ReadAsStringAsync(cancellationToken);
+                _logger.LogInformation("Request Body: {Content}", content);
+            }
+
+            // レスポンスを取得
+            var response = await base.SendAsync(request, cancellationToken);
+
+            // レスポンスをログ出力
+            _logger.LogInformation("HTTP Response: {StatusCode}", response.StatusCode);
+
+            if (response.Content != null)
+            {
+                var responseContent = await response.Content.ReadAsStringAsync(cancellationToken);
+                if (responseContent.Length > 1000)
+                {
+                    _logger.LogInformation("Response Body (truncated): {Content}...", responseContent.Substring(0, 1000));
+                }
+                else
+                {
+                    _logger.LogInformation("Response Body: {Content}", responseContent);
+                }
+
+                // レスポンスボディを再利用できるようにする
+                response.Content = new StringContent(responseContent, Encoding.UTF8, response.Content.Headers.ContentType?.MediaType ?? "application/json");
+            }
+
+            return response;
         }
     }
 }

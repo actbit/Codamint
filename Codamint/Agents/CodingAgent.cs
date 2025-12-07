@@ -38,6 +38,19 @@ namespace Codamint.Agents
         }
 
         /// <summary>
+        /// プロバイダーに応じた実行設定を作成（自動ツール呼び出し有効）
+        /// </summary>
+        private PromptExecutionSettings CreateExecutionSettingsWithFunctionChoice()
+        {
+            var executionSettings = new OpenAIPromptExecutionSettings
+            {
+                FunctionChoiceBehavior = FunctionChoiceBehavior.Auto()
+            };
+
+            return executionSettings;
+        }
+
+        /// <summary>
         /// プラグインを初期化して登録
         /// </summary>
         private void InitializePlugins()
@@ -71,22 +84,17 @@ namespace Codamint.Agents
                 _logger.LogInformation("Processing user prompt: {Prompt}", userPrompt);
 
                 var systemPrompt = "You are a helpful coding assistant. Use available functions to complete tasks. " +
-                    "FileOperation: ReadFile, WriteFile (creates if not exists), ListFiles, DeleteFile, CreateDirectory, GetFileInfo, AppendFile, GetCurrentDirectory. " +
-                    "CodeExecution: ExecuteCSharpCode (Roslyn), ValidateCSharpSyntax, ExecutePowerShellCommand (run programs/commands/system ops), ExecutePowerShellScript. " +
-                    "CodeGeneration: GenerateCode, GenerateFunction, GenerateUnitTests. " +
-                    "CodeAnalysis: AnalyzeCode, ReviewCode, SecurityAnalysis, SuggestRefactoring. " +
-                    "For files: use FileOperation. For programs: use ExecutePowerShellCommand (dotnet build, npm install, etc). " +
-                    "Always call functions, don't just explain. " +
-                    "IMPORTANT: Respond in user's language (Japanese->Japanese, English->English).";
+                    "FileOperation functions: ReadFile, WriteFile, ListFiles, DeleteFile, CreateDirectory, GetFileInfo, AppendFile, GetCurrentDirectory. " +
+                    "CodeExecution functions: ExecuteCSharpCode, ValidateCSharpSyntax, ExecutePowerShellCommand, ExecutePowerShellScript. " +
+                    "CodeGeneration functions: GenerateCode, GenerateFunction, GenerateUnitTests. " +
+                    "CodeAnalysis functions: AnalyzeCode, ReviewCode, SecurityAnalysis, SuggestRefactoring. " +
+                    "For file operations use FileOperation functions. For program execution use ExecutePowerShellCommand. " +
+                    "Always call functions to complete requests. Respond in the user's language.";
 
-                var fullPrompt = $@"{systemPrompt}
+                var fullPrompt = systemPrompt + " User Request: " + userPrompt;
 
-User Request: {userPrompt}";
-
-                var executionSettings = new OpenAIPromptExecutionSettings
-                {
-                    FunctionChoiceBehavior = FunctionChoiceBehavior.Auto()
-                };
+                // プロバイダーに応じた実行設定を作成
+                var executionSettings = CreateExecutionSettingsWithFunctionChoice();
 
                 var arguments = new KernelArguments();
                 arguments.ExecutionSettings = new Dictionary<string, PromptExecutionSettings>
