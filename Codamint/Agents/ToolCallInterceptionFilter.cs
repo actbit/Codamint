@@ -63,21 +63,6 @@ namespace Codamint.Agents
                     _logger.LogInformation("Tool executed successfully: {PluginName}.{FunctionName}", function.PluginName, function.Name);
                 }
 
-                // ツール結果の改行をエスケープして JSON 互換性を確保
-                if (context.Result != null)
-                {
-                    var resultString = context.Result.ToString();
-                    // 改行、タブ、改行文字をエスケープ
-                    var escapedResult = resultString
-                        .Replace("\\", "\\\\")
-                        .Replace("\"", "\\\"")
-                        .Replace("\r\n", "\\n")
-                        .Replace("\n", "\\n")
-                        .Replace("\r", "\\n")
-                        .Replace("\t", "\\t");
-
-                    context.Result = new Microsoft.SemanticKernel.FunctionResult(escapedResult);
-                }
             }
             catch (Exception ex)
             {

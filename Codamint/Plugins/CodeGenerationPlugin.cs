@@ -28,7 +28,12 @@ Please provide:
 Generated Code:";
 
             var response = await kernel.InvokePromptAsync(prompt);
-            return response.ToString();
+            var result = response.ToString();
+
+            // JSON シリアライズ時のエスケープ問題を回避
+            result = result.Replace("\r\n", "\n").Replace("\r", "\n");
+
+            return result;
         }
 
         [KernelFunction, Description("Generate a function with specific signature")]
@@ -47,7 +52,12 @@ Generated Code:";
 Provide a complete, production-ready implementation with proper error handling and documentation.";
 
             var response = await kernel.InvokePromptAsync(prompt);
-            return response.ToString();
+            var result = response.ToString();
+
+            // JSON シリアライズ時のエスケープ問題を回避
+            result = result.Replace("\r\n", "\n").Replace("\r", "\n");
+
+            return result;
         }
 
         [KernelFunction, Description("Generate unit tests for given code")]
@@ -70,7 +80,12 @@ Requirements:
 Generated Tests:";
 
             var response = await kernel.InvokePromptAsync(prompt);
-            return response.ToString();
+            var result = response.ToString();
+
+            // JSON シリアライズ時のエスケープ問題を回避
+            result = result.Replace("\r\n", "\n").Replace("\r", "\n");
+
+            return result;
         }
     }
 }
