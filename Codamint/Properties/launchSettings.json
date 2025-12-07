@@ -1,0 +1,10 @@
+{
+  "profiles": {
+    "Codamint": {
+      "commandName": "Project"
+    },
+    "Container (Dockerfile)": {
+      "commandName": "Docker"
+    }
+  }
+}
