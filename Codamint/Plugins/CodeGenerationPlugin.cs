@@ -17,8 +17,15 @@ namespace Codamint.Plugins
             if (string.IsNullOrEmpty(input))
                 return input;
 
-            // JsonSerializer を使用して安全にエスケープ
-            return JsonSerializer.Serialize(input).Trim('"');
+            // 手動でエスケープ処理を行う
+            return input
+                .Replace("\\", "\\\\")      // バックスラッシュ
+                .Replace("\"", "\\\"")      // ダブルクォート
+                .Replace("'", "\\'")        // シングルクォート
+                .Replace("\r\n", "\\n")     // CRLF
+                .Replace("\n", "\\n")       // LF
+                .Replace("\r", "\\n")       // CR
+                .Replace("\t", "\\t");      // タブ
         }
         [KernelFunction, Description("Generate code based on the given requirements")]
         public async Task<string> GenerateCode(

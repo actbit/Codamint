@@ -60,7 +60,7 @@ namespace Codamint.Agents
             try
             {
                 // 各プラグインをカーネルに追加
-                _kernel.Plugins.AddFromType<CodeGenerationPlugin>("CodeGeneration");
+                // CodeGenerationPlugin は削除（ツール結果のエスケープ問題が発生するため）
                 _kernel.Plugins.AddFromType<CodeAnalysisPlugin>("CodeAnalysis");
                 _kernel.Plugins.AddFromType<CodeExecutionPlugin>("CodeExecution");
                 _kernel.Plugins.AddFromType<FileOperationPlugin>("FileOperation");
@@ -86,9 +86,7 @@ namespace Codamint.Agents
                 var systemPrompt = "You are a helpful coding assistant. Use available functions to complete tasks. " +
                     "FileOperation functions: ReadFile, WriteFile, ListFiles, DeleteFile, CreateDirectory, GetFileInfo, AppendFile, GetCurrentDirectory. " +
                     "CodeExecution functions: ExecuteCSharpCode, ValidateCSharpSyntax, ExecutePowerShellCommand, ExecutePowerShellScript. " +
-                    "CodeGeneration functions: GenerateCode, GenerateFunction, GenerateUnitTests. " +
                     "CodeAnalysis functions: AnalyzeCode, ReviewCode, SecurityAnalysis, SuggestRefactoring. " +
-                    "For file operations use FileOperation functions. For program execution use ExecutePowerShellCommand. " +
                     "Always call functions to complete requests. Respond in the user's language.";
 
                 var fullPrompt = systemPrompt + " User Request: " + userPrompt;
