@@ -162,48 +162,5 @@ namespace Codamint.Plugins
             }
         }
 
-        [KernelFunction, Description("Get PowerShell command help information")]
-        public async Task<string> GetPowerShellHelp(
-            [Description("The cmdlet or command name")] string commandName)
-        {
-            try
-            {
-                if (string.IsNullOrEmpty(commandName))
-                {
-                    return "Error: Command name is required";
-                }
-
-                var command = $"Get-Help {commandName} -Full";
-
-                using (var runspace = RunspaceFactory.CreateRunspace())
-                {
-                    runspace.Open();
-
-                    using (var pipeline = runspace.CreatePipeline(command))
-                    {
-                        var results = pipeline.Invoke();
-                        var output = new StringBuilder();
-
-                        if (results != null && results.Count > 0)
-                        {
-                            foreach (var result in results)
-                            {
-                                output.AppendLine(result.ToString());
-                            }
-                        }
-                        else
-                        {
-                            output.AppendLine($"No help found for command: {commandName}");
-                        }
-
-                        return output.ToString();
-                    }
-                }
-            }
-            catch (Exception ex)
-            {
-                return $"Error getting help: {ex.Message}";
-            }
-        }
     }
 }

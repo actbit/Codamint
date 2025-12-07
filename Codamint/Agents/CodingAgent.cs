@@ -86,7 +86,7 @@ namespace Codamint.Agents
 
                 var systemPrompt = "You are a helpful coding assistant. Use available functions to complete tasks. " +
                     "FileOperation functions: ReadFile, WriteFile, ListFiles, DeleteFile, CreateDirectory, GetFileInfo, AppendFile, GetCurrentDirectory. " +
-                    "PowerShell functions: ExecutePowerShellCommand, ExecutePowerShellScript, GetPowerShellCmdlets, GetPowerShellHelp. " +
+                    "PowerShell functions: ExecutePowerShellCommand, ExecutePowerShellScript, GetPowerShellCmdlets. " +
                     "Call functions ONCE to complete requests. Do not make multiple sequential function calls. Respond in the user's language.";
 
                 var fullPrompt = systemPrompt + " User Request: " + userPrompt;
